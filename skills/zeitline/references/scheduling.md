@@ -1,4 +1,6 @@
-# Scheduled writes
+# Scheduled writes from your own runner
+
+For data Zeitline has a source for, attach the source and let the owner turn on Keep updated instead (SKILL.md section 4a); no runner or key is needed. Use a runner for private data, internal APIs and anything without a source.
 
 Schedule the collector in the environment that can reach its sources and `https://zeitline.com`. Use the same command for a first manual run and recurring runs. Put the saved document ID in configuration and inject `ZEITLINE_API_KEY` from the runner's secret store. For connector-derived lanes, the scheduled write is `write_series` with `refresh_data_source` using the saved IDs. For direct imports, the collector produces keyed events or point batches on each run.
 

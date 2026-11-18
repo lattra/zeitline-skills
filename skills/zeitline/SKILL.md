@@ -38,16 +38,34 @@ Milestone fields and payload examples: [references/writes.md](references/writes.
 
 ## 3. Populate from sources
 
-- **Catalog metrics** (GitHub repo metrics, FRED, World Bank): `search_data_sources`, then `preview_data_source` with the returned `dataSourceId`. Ask before any disclosed charge. Then `write_series` with `kind: "attach_data_source"` on a Chart lane, `refresh: true` (30 s initial-fetch budget). For a slow source use `refresh: false`, then `kind: "refresh_data_source"` with `swimlaneId` and `seriesId`.
-- **Private GitHub or custom API:** the owner connects GitHub in Settings → Connections or stores a secret reference. Never put raw credentials in a source configuration; they are refused.
-- **Releases, issues, CSV, JSON:** parse in the runner and write keyed events and points. `attach_data_source` cannot create a new GitHub Events lane; it only binds Chart outputs or re-binds an existing Events series. Map IDs, dates, timezones and units explicitly; skip and report invalid rows; leave absent rows alone on partial feeds (`missingEventAction: "keep"`).
+Prefer a live source over copied numbers: a lane bound to a source is refreshed by Zeitline itself (section 4a).
+
+- **Catalog sources** (GitHub repository activity, FRED, World Bank and more): `search_data_sources`, then `preview_data_source` with the returned `dataSourceId`. Ask before any disclosed charge. Then `write_series` with `kind: "attach_data_source"` and `target: {swimlaneName}` to create a Chart lane, with `refresh: true` (30 s initial-fetch budget). For a slow source (GitHub is one) use `refresh: false`, then `kind: "refresh_data_source"` with the saved `swimlaneId` and `seriesId`.
+- **GitHub repository chart:** `dataSourceId: "github-repo"`, `configuration: {repoUrl: "https://github.com/<owner>/<repo>", resource: "commits", outputType: "timeseries", metric: "count", timeBucket: "day", historyWindowDays: 30}`. Other resources include `pull_requests`, `issues`, `releases`, `tags`, `actions` and `deployments`; check `preview_data_source` first. Without a connected GitHub account the server shares a 60-requests-an-hour allowance, and private repos fail: ask the owner to connect GitHub in Settings → Connections.
+- **Private GitHub or custom API:** the owner connects the account in Settings → Connections or stores a secret reference. Never put raw credentials in a source configuration; they are refused.
+- **Releases, issues, CSV, JSON as events:** `attach_data_source` binds Chart outputs and re-binds an existing Events series; it cannot create a new GitHub Events lane. Write keyed events instead (section 2), or have the owner's runner write them on a schedule (section 4b). Map IDs, dates, timezones and units explicitly; skip and report invalid rows; leave absent rows alone on partial feeds (`missingEventAction: "keep"`).
 
 ## 4. Keep it updated
 
-Run the same collector from the owner's cron, GitHub Actions, Claude Code `/schedule` or a Codex automation. Run once manually, read back, then enable the cadence. Details and a GitHub Actions workflow: [references/scheduling.md](references/scheduling.md).
+### 4a. Zeitline's own schedule (lead with this)
+
+**Keep updated** is Zeitline's built-in routine. It refreshes every source-bound lane on a cadence and can research lanes that have an instruction. Only the owner can turn it on, in the app. Agents, OAuth connections and API keys cannot, so never claim you scheduled it. Hand the owner these steps:
+
+1. Open the tracker on zeitline.com.
+2. Click the caret (▾) beside **Refresh** in the toolbar, then **Keep updated…** (in Read view: the title's **···** menu, then **Keep updated**).
+3. Review the lanes and **How often** (Daily runs at 07:00 in the owner's time zone), then **Turn on**. **Run now** in the same sheet runs it immediately.
+
+Research lanes and some sources use credits; the sheet shows the cost before Turn on. After the first run, confirm it with `get_zeitline_digest` (keep the `cursor`, pass it as `since` next time). If `refresh_data_source` reports `Invalid configuration` for a lane you attached, report it to the owner and use 4b for that data until it is fixed.
+
+### 4b. Your own runner (private data, internal APIs)
+
+When the data lives behind your network or in a system Zeitline has no source for, run a collector from the owner's cron, GitHub Actions, Claude Code `/schedule` or a Codex automation. Run it once manually, read back, then enable the cadence. Details and a GitHub Actions workflow: [references/scheduling.md](references/scheduling.md).
 
 - **No CLI needed:** POST JSON-RPC `tools/call` to `https://zeitline.com/api/v1/mcp` with `Authorization: Bearer $ZEITLINE_API_KEY`.
 - **CLI:** `zeitline track batch --file <ndjson>`, then `zeitline track flush --json` and `zeitline track status --json`. `track` verbs only spool; `flush` delivers.
+
+### Dated updates
+
 - **Dated updates (the Read memo):** `manage_zeitline_version` with `action: "publish_update"`, `zeitlineId`, `date` (`YYYY-MM-DD`), and exactly one of `text` or `explanation`; optional `effectiveAt`, `description`, `milestone`, `expectedRevision`. CLI: `zeitline update <id> --date YYYY-MM-DD --file <path>`.
   - **Publish oldest-first.** A date before the newest update is refused with 409 (`update_date_before_latest_update`); an `effectiveAt` before the newest update's is refused with 409 `effective_at_before_latest_update`; `effectiveAt` more than 5 minutes ahead is refused. Re-sending the same memo for a date changes nothing. Overwriting a date's memo is not supported yet, so backfill in date order and never re-publish an older date.
 - Timeout: `get_mutation_status`, then read the document before retrying. Revision conflict: re-read and rebuild. Advance source cursors only after confirmed writes.

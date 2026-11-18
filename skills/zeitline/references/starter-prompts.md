@@ -27,10 +27,16 @@ Complete the browser sign-in and start a fresh session.
 
 OAuth is private-only. Publishing and unattended runs need an API key: the owner creates it at [Settings → API Keys](https://zeitline.com/settings/api-keys) and the runner reads `ZEITLINE_API_KEY` from its secret manager. Paste only a prompt, never a key.
 
-## A. Create a live tracker for this repo, updated daily
+## A. Create a live tracker for this repo, kept updated by Zeitline
 
 ```text
-Use the Zeitline skill against https://zeitline.com. If the skill or hosted MCP is missing, help me install it and finish browser sign-in. Create or reuse a private tracker for this repo. Backfill its releases and meaningful dated project milestones, and chart a metric you can measure from repo data. Preserve real source IDs, dates, units and links. Set up a daily refresh at 06:17 UTC using this repo's GitHub Actions if available, or the scheduler I already use. Tell me exactly where to add the API-key secret. Run one update when credentials are available, verify the writes with a digest, and give me the tracker link, first-run result and schedule status. Keep the tracker private.
+Use the Zeitline skill against https://zeitline.com. If the skill or hosted MCP is missing, help me install it and finish browser sign-in. Create or reuse a private tracker for this repo. Attach the repo's GitHub source for a commits-per-day chart, plus any other measurable series the source offers (pull requests, issues, releases). Preview each source first and refresh it once. Backfill releases and meaningful dated milestones as keyed events, preserving real IDs, dates and links. Then give me the exact clicks to turn on Keep updated in the app so Zeitline refreshes it daily; you cannot turn it on for me. After I confirm, read the tracker back with a digest and give me the link, what each lane holds and when the next update runs. Keep the tracker private.
+```
+
+## A2. Same tracker for private data or an internal API
+
+```text
+Use the Zeitline skill. Create or reuse a private tracker for <system>. Zeitline has no source for it, so set up a daily collector in this repo's GitHub Actions (or the scheduler I already use) that writes keyed events and chart points with a runner-held ZEITLINE_API_KEY. Tell me exactly where to add the secret and which key scopes to select. Run it once, verify the writes with a digest, and give me the tracker link, first-run result and schedule.
 ```
 
 ## B. Turn this CSV or API into a public interactive timeline I can share on X
